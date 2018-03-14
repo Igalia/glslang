@@ -816,8 +816,15 @@ TIntermediate::addConversion(TOperator op, TIntermTyped* node0, TIntermTyped* no
 
         break;
 
-    // Shifts can have mixed types as long as they are integer and of the same rank,
-    // without converting.
+    // FIXME: is this statemenet right?: "Shifts can have mixed types
+    // as long as they are integer and of the same rank, without
+    // converting." No reference on the GLSL spec about needing to be the same rank. And from SPIR-V spec:
+    // "Shift is treated as unsigned. The result is undefined if Shift
+    //  is greater than the bit width of the components of Base.  The
+    //  number of components and bit width of Result Type must match
+    //  those Base type. All types must be integer types."
+    // There is also no mention to force to be both ints. Can be int or unsigned int.
+    // So result and base needs to be the same rank. No mention about base and shift.
     // It's the left operand's type that determines the resulting type, so no issue
     // with assign shift ops either.
     case EOpLeftShift:
@@ -825,8 +832,8 @@ TIntermediate::addConversion(TOperator op, TIntermTyped* node0, TIntermTyped* no
     case EOpLeftShiftAssign:
     case EOpRightShiftAssign:
 
-        if (isTypeInt(type0) && isTypeInt(type1)) {
-            if (getTypeRank(type0) == getTypeRank(type1)) {
+      if ((isTypeInt(type0)|| isTypeUnsignedInt(type0)) && (isTypeInt(type1) || isTypeUnsignedInt(type1))) {
+            if (getTypeRank(type0) >= getTypeRank(type1)) {
                 return std::make_tuple(node0, node1);
             } else {
                 promoteTo = getConversionDestinatonType(type0, type1, op);
