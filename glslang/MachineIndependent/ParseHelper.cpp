@@ -3678,11 +3678,13 @@ void TParseContext::redeclareBuiltinBlock(const TSourceLoc& loc, TTypeList& newT
     if (type.isArray() != (arraySizes != nullptr))
         error(loc, "cannot change arrayness of redeclared block", blockName.c_str(), "");
     else if (type.isArray()) {
-        if (type.isExplicitlySizedArray() && arraySizes->getOuterSize() == UnsizedArraySize)
-            error(loc, "block already declared with size, can't redeclare as implicitly-sized", blockName.c_str(), "");
-        else if (type.isExplicitlySizedArray() && type.getArraySizes() != *arraySizes)
-            error(loc, "cannot change array size of redeclared block", blockName.c_str(), "");
-        else if (type.isImplicitlySizedArray() && arraySizes->getOuterSize() != UnsizedArraySize)
+        // if (type.isExplicitlySizedArray() && arraySizes->getOuterSize() == UnsizedArraySize)
+        //     error(loc, "SHIT2: block already declared with size, can't redeclare as implicitly-sized", blockName.c_str(), "");
+        // else
+        //   if (type.isExplicitlySizedArray() && type.getArraySizes() != *arraySizes)
+        //     error(loc, "cannot change array size of redeclared block", blockName.c_str(), "");
+        // else 
+          if (type.isImplicitlySizedArray() && arraySizes->getOuterSize() != UnsizedArraySize)
             type.changeOuterArraySize(arraySizes->getOuterSize());
     }
 
