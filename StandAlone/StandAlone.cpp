@@ -172,6 +172,7 @@ std::vector<std::string> Processes;                     // what should be record
 typedef std::map<unsigned int, unsigned int> TPerSetBaseBinding;
 
 std::vector<std::pair<std::string, int>> uniformLocationOverrides;
+int uniformBase = 0;
 
 std::array<std::array<unsigned int, EShLangCount>, glslang::EResCount> baseBinding;
 std::array<std::array<TPerSetBaseBinding, EShLangCount>, glslang::EResCount> baseBindingForSet;
@@ -453,6 +454,12 @@ void ProcessArguments(std::vector<std::unique_ptr<glslang::TWorkItem>>& workItem
                     } else if (lowerword == "auto-map-locations" || // synonyms
                                lowerword == "aml") {
                         Options |= EOptionAutoMapLocations;
+                    } else if (lowerword == "uniform-base") {
+                        if (argc <= 1)
+                            Error("no <base> provided for --uniform-base");
+                        uniformBase = ::strtol(argv[1], NULL, 10);
+                        bumpArg();
+                        break;
                     } else if (lowerword == "client") {
                         if (argc > 1) {
                             if (strcmp(argv[1], "vulkan100") == 0)
@@ -898,6 +905,8 @@ void CompileAndLinkShaderUnits(std::vector<ShaderCompUnit> compUnits)
             shader->addUniformLocationOverride(uniOverride.first.c_str(),
                                                uniOverride.second);
         }
+
+        shader->setUniformLocationBase(uniformBase);
 
         // Set up the environment, some subsettings take precedence over earlier
         // ways of setting things.
@@ -1369,6 +1378,7 @@ void usage()
            "  -w          synonym for --suppress-warnings\n"
            "  -x          save binary output as text-based 32-bit hexadecimal numbers\n"
            "  -u<name>:<loc> specify a uniform location override for --aml\n"
+           "  --uniform-base <base> set a base to use for generated uniform locations\n"
            "  --auto-map-bindings                  automatically bind uniform variables\n"
            "                                       without explicit bindings.\n"
            "  --amb                                synonym for --auto-map-bindings\n"

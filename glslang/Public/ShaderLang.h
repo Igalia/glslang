@@ -395,6 +395,7 @@ public:
     void setAutoMapBindings(bool map);
     void setAutoMapLocations(bool map);
     void addUniformLocationOverride(const char* name, int loc);
+    void setUniformLocationBase(int base);
     void setInvertY(bool invert);
     void setHlslIoMapping(bool hlslIoMap);
     void setFlattenUniformArrays(bool flatten);
