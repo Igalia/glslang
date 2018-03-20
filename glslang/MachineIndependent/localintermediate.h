@@ -237,7 +237,8 @@ public:
         hlslIoMapping(false),
         textureSamplerTransformMode(EShTexSampTransKeep),
         needToLegalize(false),
-        binaryDoubleOutput(false)
+        binaryDoubleOutput(false),
+        uniformLocationBase(0)
     {
         localSize[0] = 1;
         localSize[1] = 1;
@@ -655,6 +656,9 @@ public:
                     return pos->second;
     }
 
+    void setUniformLocationBase(int base) { uniformLocationBase = base; }
+    int getUniformLocationBase() const { return uniformLocationBase; }
+
     void setNeedsLegalization() { needToLegalize = true; }
     bool needsLegalization() const { return needToLegalize; }
 
@@ -777,6 +781,7 @@ protected:
     bool binaryDoubleOutput;
 
     std::unordered_map<TString, int> uniformLocationOverrides;
+    int uniformLocationBase;
 
 private:
     void operator=(TIntermediate&); // prevent assignments

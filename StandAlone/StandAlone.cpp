@@ -174,6 +174,7 @@ std::vector<std::string> Processes;                     // what should be record
 typedef std::map<unsigned int, unsigned int> TPerSetBaseBinding;
 
 std::vector<std::pair<std::string, int>> uniformLocationOverrides;
+int uniformBase = 0;
 
 std::array<std::array<unsigned int, EShLangCount>, glslang::EResCount> baseBinding;
 std::array<std::array<TPerSetBaseBinding, EShLangCount>, glslang::EResCount> baseBindingForSet;
@@ -455,6 +456,12 @@ void ProcessArguments(std::vector<std::unique_ptr<glslang::TWorkItem>>& workItem
                     } else if (lowerword == "auto-map-locations" || // synonyms
                                lowerword == "aml") {
                         Options |= EOptionAutoMapLocations;
+                    } else if (lowerword == "uniform-base") {
+                        if (argc <= 1)
+                            Error("no <base> provided for --uniform-base");
+                        uniformBase = ::strtol(argv[1], NULL, 10);
+                        bumpArg();
+                        break;
                     } else if (lowerword == "client") {
                         if (argc > 1) {
                             if (strcmp(argv[1], "vulkan100") == 0)
@@ -913,6 +920,8 @@ void CompileAndLinkShaderUnits(std::vector<ShaderCompUnit> compUnits)
             shader->addUniformLocationOverride(uniOverride.first.c_str(),
                                                uniOverride.second);
         }
+
+        shader->setUniformLocationBase(uniformBase);
 
         // Set up the environment, some subsettings take precedence over earlier
         // ways of setting things.
@@ -1401,21 +1410,7 @@ void usage()
            "              suppress GLSL warnings, except as required by \"#extension : warn\"\n"
            "  -x          save binary output as text-based 32-bit hexadecimal numbers\n"
            "  -u<name>:<loc> specify a uniform location override for --aml\n"
-           "  --auto-map-bindings | --amb       automatically bind uniform variables\n"
-           "                                    without explicit bindings\n"
-           "  --auto-map-locations | --aml      automatically locate input/output lacking\n"
-           "                                    'location' (fragile, not cross stage)\n"
-           "  --client {vulkan<ver>|opengl<ver>} see -V and -G\n"
-           "  -dumpfullversion | -dumpversion   print bare major.minor.patchlevel\n"
-           "  --flatten-uniform-arrays | --fua  flatten uniform texture/sampler arrays to\n"
-           "                                    scalars\n"
-           "  --hlsl-offsets                    allow block offsets to follow HLSL rules\n"
-           "                                    works independently of source language\n"
-           "  --hlsl-iomap                      perform IO mapping in HLSL register space\n"
-           "  --hlsl-enable-16bit-types         allow 16-bit types in SPIR-V for HLSL\n"
-           "  --invert-y | --iy                 invert position.Y output in vertex shader\n"
-           "  --keep-uncalled | --ku            don't eliminate uncalled functions\n"
-           "  --no-storage-format | --nsf       use Unknown image format\n"
+           "  --uniform-base <base> set a base to use for generated uniform locations\n"
            "  --resource-set-binding [stage] name set binding\n"
            "                                    set descriptor set and binding for\n"
            "                                    individual resources\n"
