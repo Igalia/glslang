@@ -631,6 +631,20 @@ public:
     void addProcessArgument(const std::string& arg) { processes.addArgument(arg); }
     const std::vector<std::string>& getProcesses() const { return processes.getProcesses(); }
 
+    void addUniformLocationOverride(const TString& name, int location)
+    {
+            uniformLocationOverrides[name] = location;
+    }
+
+    int getUniformLocationOverride(const TString& name) const
+    {
+            auto pos = uniformLocationOverrides.find(name);
+            if (pos == uniformLocationOverrides.end())
+                    return -1;
+            else
+                    return pos->second;
+    }
+
     void setNeedsLegalization() { needToLegalize = true; }
     bool needsLegalization() const { return needToLegalize; }
 
@@ -741,6 +755,8 @@ protected:
     TProcesses processes;
 
     bool needToLegalize;
+
+    std::unordered_map<TString, int> uniformLocationOverrides;
 
 private:
     void operator=(TIntermediate&); // prevent assignments
