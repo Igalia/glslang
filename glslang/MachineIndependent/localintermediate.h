@@ -686,6 +686,11 @@ public:
                     return pos->second;
     }
 
+    void copyUniformLocationOverrides(const TIntermediate& other)
+    {
+            uniformLocationOverrides = other.uniformLocationOverrides;
+    }
+
     void setUniformLocationBase(int base) { uniformLocationBase = base; }
     int getUniformLocationBase() const { return uniformLocationBase; }
 
