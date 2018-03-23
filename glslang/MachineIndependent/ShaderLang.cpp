@@ -1860,6 +1860,14 @@ bool TProgram::linkStage(EShLanguage stage, EShMessages messages)
         }
         intermediate[stage]->setSpv(firstIntermediate->getSpv());
 
+        if (firstIntermediate->getAutoMapBindings())
+                intermediate[stage]->setAutoMapBindings(true);
+        if (firstIntermediate->getAutoMapLocations())
+                intermediate[stage]->setAutoMapLocations(true);
+        int base = firstIntermediate->getUniformLocationBase();
+        intermediate[stage]->setUniformLocationBase(base);
+        intermediate[stage]->copyUniformLocationOverrides(*firstIntermediate);
+
         newedIntermediate[stage] = true;
     }
 
