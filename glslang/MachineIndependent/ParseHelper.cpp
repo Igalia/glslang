@@ -3607,14 +3607,14 @@ void TParseContext::redeclareBuiltinBlock(const TSourceLoc& loc, TTypeList& newT
         error(loc, "block redeclaration has extra members", blockName.c_str(), "");
     if (type.isArray() != (arraySizes != nullptr))
         error(loc, "cannot change arrayness of redeclared block", blockName.c_str(), "");
-    else if (type.isArray()) {
-        if (type.isSizedArray() && !arraySizes->isSized())
-            error(loc, "block already declared with size, can't redeclare as unsized", blockName.c_str(), "");
-        else if (type.isSizedArray() && *type.getArraySizes() != *arraySizes)
-            error(loc, "cannot change array size of redeclared block", blockName.c_str(), "");
-        else if (!type.isSizedArray() && arraySizes->isSized())
-            type.changeOuterArraySize(arraySizes->getOuterSize());
-    }
+    // else if (type.isArray()) {
+    //     if (type.isSizedArray() && !arraySizes->isSized())
+    //         error(loc, "block already declared with size, can't redeclare as unsized", blockName.c_str(), "");
+    //     else if (type.isSizedArray() && *type.getArraySizes() != *arraySizes)
+    //         error(loc, "cannot change array size of redeclared block", blockName.c_str(), "");
+    //     else if (!type.isSizedArray() && arraySizes->isSized())
+    //         type.changeOuterArraySize(arraySizes->getOuterSize());
+    // }
 
     symbolTable.insert(*block);
 
