@@ -5,8 +5,6 @@ float a1;
 
 float foo();
 
-out float cout;
-
 void main()
 {
     f = 10;
