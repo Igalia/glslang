@@ -677,22 +677,6 @@ public:
         }
     }
 
-    // non-built-in symbols that might link between compilation units
-    bool isLinkable() const
-    {
-        switch (storage) {
-        case EvqGlobal:
-        case EvqVaryingIn:
-        case EvqVaryingOut:
-        case EvqUniform:
-        case EvqBuffer:
-        case EvqShared:
-            return true;
-        default:
-            return false;
-        }
-    }
-
     // True if this type of IO is supposed to be arrayed with extra level for per-vertex data
     bool isArrayedIo(EShLanguage language) const
     {

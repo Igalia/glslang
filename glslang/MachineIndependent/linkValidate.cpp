@@ -77,13 +77,12 @@ void TIntermediate::warn(TInfoSink& infoSink, const char* message)
 //
 void TIntermediate::merge(TInfoSink& infoSink, TIntermediate& unit)
 {
-    mergeCallGraphs(infoSink, unit);
-    mergeModes(infoSink, unit);
-    mergeTrees(infoSink, unit);
-}
+    if (source == EShSourceNone)
+        source = unit.source;
 
-void TIntermediate::mergeCallGraphs(TInfoSink& infoSink, TIntermediate& unit)
-{
+    if (source != unit.source)
+        error(infoSink, "can't link compilation units from different source languages");
+
     if (unit.getNumEntryPoints() > 0) {
         if (getNumEntryPoints() > 0)
             error(infoSink, "can't handle multiple entry points per stage");
@@ -93,50 +92,35 @@ void TIntermediate::mergeCallGraphs(TInfoSink& infoSink, TIntermediate& unit)
         }
     }
     numEntryPoints += unit.getNumEntryPoints();
-
-    callGraph.insert(callGraph.end(), unit.callGraph.begin(), unit.callGraph.end());
-}
-
-#define MERGE_MAX(member) member = std::max(member, unit.member)
-#define MERGE_TRUE(member) if (unit.member) member = unit.member;
-
-void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
-{
-    if (language != unit.language)
-        error(infoSink, "stages must match when linking into a single stage");
-
-    if (source == EShSourceNone)
-        source = unit.source;
-    if (source != unit.source)
-        error(infoSink, "can't link compilation units from different source languages");
-
-    if (treeRoot == nullptr) {
-        profile = unit.profile;
-        version = unit.version;
-        requestedExtensions = unit.requestedExtensions;
-    } else {
-        if ((profile == EEsProfile) != (unit.profile == EEsProfile))
-            error(infoSink, "Cannot cross link ES and desktop profiles");
-        else if (unit.profile == ECompatibilityProfile)
-            profile = ECompatibilityProfile;
-        version = std::max(version, unit.version);
-        requestedExtensions.insert(unit.requestedExtensions.begin(), unit.requestedExtensions.end());
-    }
-
-    MERGE_MAX(spvVersion.spv);
-    MERGE_MAX(spvVersion.vulkanGlsl);
-    MERGE_MAX(spvVersion.vulkan);
-    MERGE_MAX(spvVersion.openGl);
-
     numErrors += unit.getNumErrors();
     numPushConstants += unit.numPushConstants;
+    callGraph.insert(callGraph.end(), unit.callGraph.begin(), unit.callGraph.end());
 
-    if (unit.invocations != TQualifier::layoutNotSet) {
-        if (invocations == TQualifier::layoutNotSet)
-            invocations = unit.invocations;
-        else if (invocations != unit.invocations)
-            error(infoSink, "number of invocations must match between compilation units");
-    }
+    if (originUpperLeft != unit.originUpperLeft || pixelCenterInteger != unit.pixelCenterInteger)
+        error(infoSink, "gl_FragCoord redeclarations must match across shaders");
+
+    if (! earlyFragmentTests)
+        earlyFragmentTests = unit.earlyFragmentTests;
+
+    if (!postDepthCoverage)
+        postDepthCoverage = unit.postDepthCoverage;
+
+    if (depthLayout == EldNone)
+        depthLayout = unit.depthLayout;
+    else if (depthLayout != unit.depthLayout)
+        error(infoSink, "Contradictory depth layouts");
+
+    blendEquations |= unit.blendEquations;
+
+    if (inputPrimitive == ElgNone)
+        inputPrimitive = unit.inputPrimitive;
+    else if (inputPrimitive != unit.inputPrimitive)
+        error(infoSink, "Contradictory input layout primitives");
+
+    if (outputPrimitive == ElgNone)
+        outputPrimitive = unit.outputPrimitive;
+    else if (outputPrimitive != unit.outputPrimitive)
+        error(infoSink, "Contradictory output layout primitives");
 
     if (vertices == TQualifier::layoutNotSet)
         vertices = unit.vertices;
@@ -163,19 +147,6 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
     }
 #endif
 
-    if (inputPrimitive == ElgNone)
-        inputPrimitive = unit.inputPrimitive;
-    else if (inputPrimitive != unit.inputPrimitive)
-        error(infoSink, "Contradictory input layout primitives");
-
-    if (outputPrimitive == ElgNone)
-        outputPrimitive = unit.outputPrimitive;
-    else if (outputPrimitive != unit.outputPrimitive)
-        error(infoSink, "Contradictory output layout primitives");
-
-    if (originUpperLeft != unit.originUpperLeft || pixelCenterInteger != unit.pixelCenterInteger)
-        error(infoSink, "gl_FragCoord redeclarations must match across shaders");
-
     if (vertexSpacing == EvsNone)
         vertexSpacing = unit.vertexSpacing;
     else if (vertexSpacing != unit.vertexSpacing)
@@ -186,7 +157,8 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
     else if (vertexOrder != unit.vertexOrder)
         error(infoSink, "Contradictory triangle ordering");
 
-    MERGE_TRUE(pointMode);
+    if (unit.pointMode)
+        pointMode = true;
 
     for (int i = 0; i < 3; ++i) {
         if (localSize[i] > 1)
@@ -200,21 +172,8 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
             error(infoSink, "Contradictory local size specialization ids");
     }
 
-    MERGE_TRUE(earlyFragmentTests);
-    MERGE_TRUE(postDepthCoverage);
-
-    if (depthLayout == EldNone)
-        depthLayout = unit.depthLayout;
-    else if (depthLayout != unit.depthLayout)
-        error(infoSink, "Contradictory depth layouts");
-
-    MERGE_TRUE(depthReplacing);
-    MERGE_TRUE(hlslFunctionality1);
-
-    blendEquations |= unit.blendEquations;
-
-    MERGE_TRUE(xfbMode);
-
+    if (unit.xfbMode)
+        xfbMode = true;
     for (size_t b = 0; b < xfbBuffers.size(); ++b) {
         if (xfbBuffers[b].stride == TQualifier::layoutXfbStrideEnd)
             xfbBuffers[b].stride = unit.xfbBuffers[b].stride;
@@ -226,40 +185,22 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
         // TODO: 4.4 link: enhanced layouts: compare ranges
     }
 
-    MERGE_TRUE(multiStream);
+    if (unit.treeRoot == 0)
+        return;
 
-#ifdef NV_EXTENSIONS
-    MERGE_TRUE(layoutOverrideCoverage);
-    MERGE_TRUE(geoPassthroughEXT);
-#endif
-
-    for (unsigned int i = 0; i < unit.shiftBinding.size(); ++i) {
-        if (unit.shiftBinding[i] > 0)
-            setShiftBinding((TResourceType)i, unit.shiftBinding[i]);
+    if (treeRoot == 0) {
+        treeRoot = unit.treeRoot;
+        version = unit.version;
+        requestedExtensions = unit.requestedExtensions;
+        return;
     }
 
-    for (unsigned int i = 0; i < unit.shiftBindingForSet.size(); ++i) {
-        for (auto it = unit.shiftBindingForSet[i].begin(); it != unit.shiftBindingForSet[i].end(); ++it)
-            setShiftBindingForSet((TResourceType)i, it->second, it->first);
-    }
+    // Getting this far means we have two existing trees to merge...
+    mergeTree(infoSink, unit);
 
-    resourceSetBinding.insert(resourceSetBinding.end(), unit.resourceSetBinding.begin(), unit.resourceSetBinding.end());
-
-    MERGE_TRUE(autoMapBindings);
-    MERGE_TRUE(autoMapLocations);
-    MERGE_TRUE(invertY);
-    MERGE_TRUE(flattenUniformArrays);
-    MERGE_TRUE(useUnknownFormat);
-    MERGE_TRUE(hlslOffsets);
-    MERGE_TRUE(useStorageBuffer);
-    MERGE_TRUE(hlslIoMapping);
-
-    // TODO: sourceFile
-    // TODO: sourceText
-    // TODO: processes
-
-    MERGE_TRUE(needToLegalize);
-    MERGE_TRUE(binaryDoubleOutput);
+    version = std::max(version, unit.version);
+    requestedExtensions.insert(unit.requestedExtensions.begin(), unit.requestedExtensions.end());
+    ioAccessed.insert(unit.ioAccessed.begin(), unit.ioAccessed.end());
 }
 
 //
@@ -268,25 +209,8 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
 // and might have overlaps that are not the same symbol, or might have different
 // IDs for what should be the same shared symbol.
 //
-void TIntermediate::mergeTrees(TInfoSink& infoSink, TIntermediate& unit)
+void TIntermediate::mergeTree(TInfoSink& infoSink, TIntermediate& unit)
 {
-    if (unit.treeRoot == nullptr)
-        return;
-
-    if (treeRoot == nullptr) {
-        treeRoot = unit.treeRoot;
-        return;
-    }
-
-    // Getting this far means we have two existing trees to merge...
-#ifdef NV_EXTENSIONS
-    numShaderRecordNVBlocks += unit.numShaderRecordNVBlocks;
-#endif
-
-#ifdef NV_EXTENSIONS
-    numTaskNVBlocks += unit.numTaskNVBlocks;
-#endif
-
     // Get the top-level globals of each unit
     TIntermSequence& globals = treeRoot->getAsAggregate()->getSequence();
     TIntermSequence& unitGlobals = unit.treeRoot->getAsAggregate()->getSequence();
@@ -304,7 +228,6 @@ void TIntermediate::mergeTrees(TInfoSink& infoSink, TIntermediate& unit)
 
     mergeBodies(infoSink, globals, unitGlobals);
     mergeLinkerObjects(infoSink, linkerObjects, unitLinkerObjects);
-    ioAccessed.insert(unit.ioAccessed.begin(), unit.ioAccessed.end());
 }
 
 // Traverser that seeds an ID map with all built-ins, and tracks the
@@ -331,7 +254,7 @@ protected:
     int maxId;
 };
 
-// Traverser that seeds an ID map with non-builtins.
+// Traverser that seeds an ID map with non-builtin globals.
 // (It would be nice to put this in a function, but that causes warnings
 // on having no bodies for the copy-constructor/operator=.)
 class TUserIdTraverser : public TIntermTraverser {
@@ -341,7 +264,7 @@ public:
     virtual void visitSymbol(TIntermSymbol* symbol)
     {
         const TQualifier& qualifier = symbol->getType().getQualifier();
-        if (qualifier.builtIn == EbvNone)
+        if (qualifier.storage == EvqGlobal && qualifier.builtIn == EbvNone)
             idMap[symbol->getName()] = symbol->getId();
     }
 
@@ -377,7 +300,7 @@ public:
     {
         const TQualifier& qualifier = symbol->getType().getQualifier();
         bool remapped = false;
-        if (qualifier.isLinkable() || qualifier.builtIn != EbvNone) {
+        if (qualifier.storage == EvqGlobal || qualifier.builtIn != EbvNone) {
             auto it = idMap.find(symbol->getName());
             if (it != idMap.end()) {
                 symbol->changeId(it->second);
