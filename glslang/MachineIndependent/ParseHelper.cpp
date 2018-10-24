@@ -5684,6 +5684,24 @@ void TParseContext::fixOffset(const TSourceLoc& loc, TSymbol& symbol)
             atomicUintOffsets[qualifier.layoutBinding] = offset + numOffsets;
         }
     }
+
+    // From GLSL spec, section Transform feedback Layout Qualifiers:
+    //   "The given offset applies to the first component of the first
+    //    member of the qualified entity. Then, within the qualified
+    //    entity, subsequent components are each assigned, in order,
+    //    to d the next available offset aligned to a multiple of that
+    //    component’s size. Aggregate types are flattened down to the
+    //    component level to get this sequence of components."
+    //
+    // Here we are using the method fixBlockXfbOffsets. Although that
+    // one was initially intended for blocks, it is implemented based
+    // on qualifiers and ttypelists, so it should be working here.
+
+    if (symbol.getType().getBasicType() == EbtStruct &&
+        qualifier.hasXfbOffset()) {
+       fixBlockXfbOffsets(symbol.getWritableType().getQualifier(),
+                          *symbol.getWritableType().getWritableStruct());
+    }
 }
 
 //
