@@ -7179,8 +7179,16 @@ spv::Id TGlslangToSpvTraverser::getSymbolId(const glslang::TIntermSymbol* symbol
         if (symbol->getQualifier().hasXfbBuffer()) {
             builder.addDecoration(id, spv::DecorationXfbBuffer, symbol->getQualifier().layoutXfbBuffer);
             unsigned stride = glslangIntermediate->getXfbStride(symbol->getQualifier().layoutXfbBuffer);
-            if (stride != glslang::TQualifier::layoutXfbStrideEnd)
-                builder.addDecoration(id, spv::DecorationXfbStride, stride);
+            if (stride != glslang::TQualifier::layoutXfbStrideEnd) {
+               if (!symbol->getQualifier().hasXfbStride()) {
+                  builder.addDecoration(id, spv::DecorationXfbStride, stride);
+               } else {
+                  // If the qualifier has an stride it was already
+                  // added above. We just check that the stride is the
+                  // same.
+                  assert(stride == symbol->getQualifier().layoutXfbStride);
+               }
+            }
         }
         if (symbol->getQualifier().hasXfbOffset())
             builder.addDecoration(id, spv::DecorationOffset, symbol->getQualifier().layoutXfbOffset);
