@@ -439,6 +439,7 @@ INSTANTIATE_TEST_CASE_P(
         "spv.xfbOffsetOnBlockMembersAssignment.vert",
         "spv.xfbOffsetOnStructMembersAssignment.vert",
         "spv.xfbOverlapOffsetCheckWithBlockAndMember.vert",
+        "spv.xfbStrideJustOnce.vert",
     })),
     FileNameAsCustomTestSuffix
 );
